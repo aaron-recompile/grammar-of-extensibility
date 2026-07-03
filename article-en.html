@@ -1,0 +1,316 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/><title>The Grammar of Bitcoin&#x27;s Extensibility</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--dim:#8b949e;--accent:#58a6ff;--op:#f0883e;--ok:#2ea043}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+.topbar{position:sticky;top:0;background:rgba(13,17,23,.9);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:11px 20px;font-size:14px}
+.topbar a{color:var(--accent);text-decoration:none} .topbar a:hover{text-decoration:underline}
+main{max-width:760px;margin:0 auto;padding:34px 22px 100px}
+h1{font-size:30px;line-height:1.25;margin:8px 0 8px}
+h2{font-size:22px;margin:44px 0 14px;padding-top:22px;border-top:1px solid var(--line)}
+h3{font-size:17px;color:var(--dim);font-weight:600;margin:0 0 22px}
+h1+*,h2+*{margin-top:0}
+p,li{color:#c9d1d9} strong,b{color:var(--fg)}
+a{color:var(--accent)} a:hover{text-decoration:underline}
+blockquote{margin:18px 0;padding:6px 18px;border-left:3px solid var(--accent);background:#12182080;color:var(--dim);border-radius:0 6px 6px 0}
+code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:14px 16px;overflow:auto}
+pre code{background:none;border:0;padding:0;font-size:13px;line-height:1.6;color:var(--op)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;display:block;overflow:auto}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+th{background:var(--panel);color:var(--fg)}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+em{color:#c9d1d9} ul,ol{padding-left:24px}
+.cta{display:inline-block;background:var(--op);color:#0d1117;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:8px;margin:10px 0}
+.foot{color:var(--dim);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+</style></head><body>
+<div class="topbar">← <a href="./">The Grammar of Bitcoin's Extensibility · 比特币的扩展性语法学</a></div>
+<main>
+<h1 id="the-grammar-of-bitcoins-extensibility">The Grammar of Bitcoin's
+Extensibility</h1>
+<h3
+id="bitcoin-doesnt-add-features-by-changing-bytes-it-reserves-slots--and-the-block-explorer-still-shows-each-one-under-its-pre-activation-name">Bitcoin
+doesn't add features by changing bytes. It reserves <em>slots</em> — and
+the block explorer still shows each one under its pre-activation
+name.</h3>
+<hr />
+<p>Here are five Bitcoin coins. On a block explorer, all five addresses
+look identical: <code>tb1p…</code>, <code>tb1p…</code>,
+<code>tb1p…</code>. Same prefix, same length, same everything.</p>
+<p>Then you spend them, and the witness opens up. One reveals nothing
+but a signature. One assembles bytes with <code>OP_CAT</code>. One
+checks a signature over an arbitrary message. One forces the coin's next
+destination. One makes a signature that no longer commits to the UTXO it
+spends.</p>
+<p>Same <code>tb1p</code>. Wildly different machinery inside.
+<strong>How does one address shape hide five different upgrade
+mechanisms — and how does Bitcoin keep adding more without ever breaking
+the old ones?</strong></p>
+<p>The usual way to study this is to ask "what can CTV do? what can CAT
+do?" — a <em>feature</em> question, and it's been written to death. This
+is a different question, one layer down: <strong>where, in the actual
+bytes of the protocol, did Bitcoin pre-reserve room for these upgrades,
+and what shape can each reserved slot hold?</strong></p>
+<p>That question has an answer you can read off the wire, byte by byte.
+Every example below is a real transaction on signet. There's an <a
+href="./explorer.html">interactive explorer</a> that lets you flip
+between them and watch each one plug into its slot; this essay is the
+map.</p>
+<p>Let's peel the onion from the outside in.</p>
+<h2 id="layer-1--the-address-only-carries-the-version-number">Layer 1 —
+the address only carries the version number</h2>
+<p>A Taproot output's script is <code>51 20 &lt;32 bytes&gt;</code>.
+That's <code>OP_1</code> (witness <strong>version 1</strong>) followed
+by <code>OP_PUSHBYTES_32</code> and the output key. The <code>1</code>
+in <code>bc1p</code>/<code>tb1p</code> <em>is</em> the witness
+version.</p>
+<p>This is the one and only upgrade layer that lives <strong>in the
+address</strong>. Everything else we're about to meet is hidden in the
+witness and never shows up until you spend. Which is why the address
+can't tell you anything: a plain key-path coin (<code>386dbb6a…</code>,
+witness = one 64-byte signature, no script at all) wears the exact same
+<code>tb1p</code> as the covenant coins below.</p>
+<p>And notice the ladder this layer already is: <code>v0</code> is
+SegWit (<code>bc1q</code>), <code>v1</code> is Taproot
+(<code>bc1p</code>, where all five of our coins live), and
+<strong><code>v2</code> through <code>v16</code> are defined and
+empty</strong> — fifteen untouched rungs. When Bitcoin someday adds,
+say, a quantum-resistant signature scheme, the natural place to hang it
+is a new witness version up here.</p>
+<h2 id="layer-2--the-control-blocks-first-byte-is-mostly-a-lie">Layer 2
+— the control block's first byte is (mostly) a lie</h2>
+<p>Spend by script-path and the witness ends with a <em>control
+block</em>. People love to read meaning into its first byte. In our
+examples it's <code>c0</code> for the APO leaf and <code>c1</code> for
+the CSFS leaf, and it's tempting to think that difference <em>means</em>
+something about the upgrade.</p>
+<p>It doesn't — and the precise reason is worth pinning down. That first
+byte packs <strong>two fields into one byte</strong>: its top seven bits
+(<code>&amp; 0xfe</code>) are the <strong>leaf version</strong>, and its
+lowest bit (<code>&amp; 0x01</code>) is a <strong>parity bit</strong> —
+the Y-coordinate parity of the taproot <em>output</em> key
+<code>Q</code> (which lives x-only in the scriptPubKey, so a verifier
+needs the parity to recompute the taproot commitment). So
+<code>c0</code> and <code>c1</code> are the <strong>same</strong> leaf
+version — <code>0xc0</code>, standard tapscript — with opposite parity;
+you'd need <code>0xc2</code> to see a genuinely different leaf version.
+The leaf version is the part that could someday carry an upgrade, and
+for every leaf we'll see it is <code>0xc0</code>. The <em>next</em> leaf
+version, <code>0xc2</code>, is already <strong>defined</strong> — it's
+the "tapscript v2" dialect (the Great Script Restoration line,
+BIP-440/441) — but there's no on-chain example of it here yet: it's a
+reserved slot with the tooling built and the door not yet opened. Higher
+even values are reserved and empty too.</p>
+<p>So Layer 2 is a real slot, but our upgrades don't live here. Two
+coins can show <code>c0</code> and <code>c1</code> and be running the
+<em>same</em> leaf version. If you only remember one debunking from this
+essay: <strong><code>c0</code> vs <code>c1</code> is parity, not
+mechanism.</strong></p>
+<h2 id="layer-3--the-opcode-slot-and-the-fossil-in-its-name">Layer 3 —
+the opcode slot, and the fossil in its name</h2>
+<p>Now the heart of it. Inside the leaf, the opcode. And here Bitcoin
+has <strong>two different reserved slots</strong>, which is the single
+most important — and least explained — distinction in the whole
+picture.</p>
+<p>Look at two leaves, side by side:</p>
+<pre><code>CTV  (9ccbce8a…):   20 &lt;32B template hash&gt;  b3
+                                             ▲ OP_NOP4
+CSFS (51fceec6…):   20 ff1f9fa3…9986b8  cc  69  cc
+                                        ▲ OP_CHECKSIGFROMSTACK</code></pre>
+<p>On a block explorer, that <code>b3</code> shows up as
+<strong><code>OP_NOP4</code></strong>, and that <code>cc</code> shows up
+as <strong><code>OP_RETURN_204</code></strong>. Those aren't bugs, and
+they aren't arbitrary. <strong>A display name is the byte's
+pre-activation identity — a fossil.</strong> And the two fossils are
+different because CTV and CSFS occupy two different reserved slots:</p>
+<ul>
+<li><p><strong>The NOP slot.</strong> <code>OP_NOP1…OP_NOP10</code> were
+built to do <em>nothing</em> — no-ops. A soft fork can redefine one to
+mean "if some condition fails, abort." That's all it can do: a read-only
+check. It <strong>cannot touch the stack</strong>, because old nodes
+still treat the byte as a no-op, and both must reach the same verdict.
+<strong>CTV fits here</strong> — it only peeks at a template hash and
+asks "does this transaction match?" It never pops, never pushes. So it
+can live in the humble NOP slot (<code>OP_NOP4</code>), and — because
+NOP upgrades are context-general — it even works outside
+Taproot.</p></li>
+<li><p><strong>The OP_SUCCESS slot.</strong> Tapscript (BIP-342)
+introduced a set of ~80 <code>OP_SUCCESSx</code> bytes with a wild
+property: before activation, encountering one makes the <strong>entire
+leaf succeed unconditionally</strong>. That's the <em>most
+permissive</em> possible behavior. And that's exactly what makes it safe
+to redefine into <em>anything</em> — because any new rule, however
+strict, can only make a formerly-always-passing script <em>fail
+more</em>, never pass something it shouldn't. So an OP_SUCCESS opcode is
+free to <strong>read and rewrite the stack</strong>. <code>OP_CAT</code>
+(pop two, push their concatenation), <code>OP_CHECKSIGFROMSTACK</code>
+(pop sig/message/pubkey, push a boolean), <code>OP_INTERNALKEY</code>
+(push the internal key) — all of them move the stack, so all of them
+<strong>must</strong> use an OP_SUCCESS slot. None could fit a
+NOP.</p></li>
+</ul>
+<p>That's the rule, and it isn't a taste — it's forced by the opcode's
+behavior:</p>
+<pre><code>Does the new opcode need to move the stack?
+  ├─ No, just pass/fail        → NOP slot        → CTV          (explorer: OP_NOP4)
+  └─ Yes, read/write the stack → OP_SUCCESS slot  → CAT/CSFS/IK  (explorer: OP_SUCCESS/RETURN_x)</code></pre>
+<p>The dramatic version of this lives in the "before" column of the
+explorer. Yesterday, <code>0x7e</code> in a tapscript was "this leaf
+passes, no questions asked." Today the same byte pops two stack items
+and concatenates them. <strong>The soft fork didn't add a byte — it
+quietly swapped the meaning of one that was already there.</strong> That
+swap, repeated across a handful of reserved bytes, is most of how
+Bitcoin grows.</p>
+<h2 id="layer-45--the-coin-that-isnt-even-an-opcode">Layer 4/5 — the
+coin that isn't even an opcode</h2>
+<p>Now the odd one out. <code>SIGHASH_ANYPREVOUT</code> (APO) is a
+covenant-adjacent superpower — Eltoo, Lightning Symmetry — and you'd
+expect it to be an opcode too. It isn't.</p>
+<p>Look at its leaf (<code>096e31cc…</code>) next to the CSFS leaf, and
+watch the <strong>same key</strong>:</p>
+<pre><code>CSFS: 20   ff1f9fa3…9986b8      cc   ← 32-byte push, bare x-only key
+APO:  21 01 ff1f9fa3…9986b8     ac   ← 33-byte push, a 0x01 &quot;hat&quot;, plain OP_CHECKSIG</code></pre>
+<p>Identical public key material, <code>ff1f9fa3…9986b8</code>. In the
+CSFS leaf it's pushed as <strong>32 bytes</strong>. In the APO leaf it's
+<strong>33</strong> — wearing a <code>0x01</code> prefix — and the
+opcode after it is just an ordinary <code>OP_CHECKSIG</code>
+(<code>ac</code>). <strong>APO adds no new opcode at all.</strong> Its
+entire mechanism is that one-byte hat plus a new set of sighash flags:
+the <code>0x01</code> prefix flips <code>OP_CHECKSIG</code> into
+<em>anyprevout mode</em>, where the signature stops committing to which
+UTXO it spends.</p>
+<p>So the "is it 32 or 33 bytes?" of a pushed key is a fingerprint of
+<em>which layer</em> the upgrade lives in. 32 bytes: the key is used
+directly (CSFS, CTV's hash, IK). 33 bytes with a <code>0x01</code>: the
+key is a mode switch, and the real machinery is one layer deeper, down
+in the signature. (The prettiest proof of that depth: APO's two spends
+<code>03c0577c…</code> and <code>46091190…</code> carry the
+<strong>byte-identical witness</strong> on two different UTXOs — a
+signature that genuinely doesn't care which coin it's spending.)</p>
+<h2 id="layer-6--the-empty-pocket">Layer 6 — the empty pocket</h2>
+<p>There's one more reserved slot, and it's almost entirely
+undocumented: the <strong>annex</strong>, a witness field that must
+start with <code>0x50</code>. It's reserved, signed-over, and — as of
+today — <strong>used for nothing at all.</strong> An empty pocket sewn
+into every Taproot spend, waiting for a future upgrade to give it
+meaning.</p>
+<p>This one is a genuine blank on the map. There's very little
+developer-facing writing about the annex in any language, which makes it
+the natural place to plant a flag: construct a spend that actually
+carries a non-empty annex, and show, on-chain, exactly how the signature
+covers it and the script can't see it. (That experiment is the one
+artifact this series still owes — and the reason it's worth doing is
+precisely that nobody has.)</p>
+<h2 id="the-dial-is-a-preset-the-grid-is-the-whole-space">The dial is a
+preset. The grid is the whole space.</h2>
+<p>Go back to APO for a moment, because it cracks something open. When
+APO drops "which coin am I spending," it doesn't drop it as one lump —
+it has two depths. <code>ANYPREVOUT</code> drops the coin's
+<em>identity</em> (the outpoint) but still commits to its
+<em>script</em> and its <em>amount</em>;
+<code>ANYPREVOUTANYSCRIPT</code> drops the script and the amount too. So
+the thing a signature commits to about an input was never one switch —
+it's a bundle of sub-fields (identity, script, amount, sequence), and
+APO lets you peel them off one at a time.</p>
+<p>Now turn that lens on the output side. <code>SIGHASH_NONE</code>
+drops <em>the whole output</em> — both the recipient (the script, the
+"address") and the amount, together, in one coarse move. But an output
+is the same kind of bundle: an address and a value. There is no reason
+in principle you couldn't commit to <em>the amount but not the
+recipient</em>, or <em>the recipient but not the amount</em>. Standard
+sighash simply doesn't hand you that dial —
+<code>ALL / SINGLE / NONE</code> are three coarse presets over a much
+finer grid.</p>
+<p>So here is the real shape of the thing, the one the six flags only
+hint at:</p>
+<blockquote>
+<p>A signature commits to a <strong>subset of the transaction's
+sub-fields</strong> — this input's identity, that input's amount, this
+output's script, that output's value, the locktime, and so on. The
+sighash flags are a handful of <strong>coarse presets</strong> over that
+grid. APO adds a few finer ones on the input side. But the grid itself
+is large, and the flags visit only a few of its corners.</p>
+</blockquote>
+<p>Recall the <strong>SEE (看) / BLIND (蒙)</strong> dials from the
+sighash booklet, <a href="https://sighash.bitcoincoding.dev/"><em>What a
+Signature Can See</em></a>: a flag flips fields only in big blocks. The
+grid underneath is finer —</p>
+<pre><code>   the coarse dial (a sighash flag)         the fine grid underneath
+   OUTPUT:  ALL / SINGLE / NONE             each input  = [ identity | script | amount ]
+   INPUT :  all / mine(ACP) / none(APO)     each output = [ address  | amount ]
+
+                    identity   script   amount
+          in 0        ● 看      ● 看     ● 看
+          in 1        ○ 蒙      ● 看     ● 看     ← APO blinds just in-1&#39;s identity
+          out 0        —        ● 看     ○ 蒙     ← SEE the address, BLIND the amount
+          out 1        —        ○ 蒙     ● 看     ← BLIND the address, SEE the amount
+                       ● = SEE (看)      ○ = BLIND (蒙)
+
+   A flag can only flip whole rows — a few corners of this grid.
+   CAT + CSFS flip ANY cell: glue exactly the fields you want, then verify.</code></pre>
+<p>And <em>this</em> is where it stops being trivia. Because there is a
+way to reach <strong>any</strong> point on that grid — not a preset,
+whatever subset of committable sub-fields you like. You assemble the
+signed message yourself, field by field, with <code>OP_CAT</code>, and
+check the signature over exactly that assembly with
+<code>OP_CHECKSIGFROMSTACK</code>. Want to commit to just the
+<em>amount</em> of output 2 and nothing else? Glue that one field, sign
+it, verify it. Just the prevouts and none of the amounts? Same move. The
+coarse flags were always samples of a continuum; CAT + CSFS make the
+whole continuum addressable.</p>
+<p>That is why showing CAT + CSFS can reproduce these commitments is not
+a footnote. It is the statement that the entire grid — every committable
+sub-field subset that <code>SIGHASH_ALL</code>,
+<code>ANYONECANPAY</code>, <code>SINGLE</code>, and
+<code>ANYPREVOUT</code> each reach one coarse corner of — is reachable
+by hand, today, on already-activated opcodes. The flags are the presets.
+CAT + CSFS is the full keyboard.</p>
+<h2 id="count-the-empty-slots">Count the empty slots</h2>
+<p>Step back and the whole picture is a stack of reserved slots, most of
+them still sealed:</p>
+<ul>
+<li>Witness versions <strong>v2–v16</strong>: fifteen, empty.</li>
+<li>Leaf versions above <code>0xc0</code>: a whole range, empty.</li>
+<li>NOP opcodes: a couple used (CLTV, CSV), CTV proposed for one more,
+the rest open.</li>
+<li>OP_SUCCESS opcodes: ~80 of them; CAT, CSFS, INTERNALKEY spoken for,
+roughly seventy-seven still open.</li>
+<li>The annex: one empty pocket.</li>
+</ul>
+<p>That's on the order of <strong>a hundred reserved-but-empty upgrade
+slots</strong>. Every future soft fork has to fold itself into one of
+these shapes — a read-only NOP check, a stack-moving OP_SUCCESS opcode,
+a sighash-flag-and-pubkey-prefix trick, a new witness version, or the
+annex — or it has to argue for adding a brand-new slot. <strong>That
+constraint set — the shapes Bitcoin will accept a change in — is the
+grammar of its extensibility.</strong> It's not written in any one BIP.
+It's written in the bytes.</p>
+<p>Most writing about Bitcoin script asks what an opcode <em>does</em>.
+This asks the question underneath: <em>how an opcode is allowed to exist
+at all</em> — and the answer turns out to be legible, one byte at a
+time, on a <code>tb1p</code> address that gives nothing away until you
+open it.</p>
+<hr />
+<p><em>Every transaction cited here is on signet. Flip between them in
+the <a href="./explorer.html">interactive explorer</a>. Byte-level
+write-ups of the individual opcodes — <a
+href="https://medium.com/@aaron.recompile/op-cat-on-signet-concatenation-commitment-and-bitcoin-inquisition-ed34a07866d6">OP_CAT</a>,
+<a
+href="https://medium.com/@aaron.recompile/op-checksigfromstack-on-signet-sign-anything-verify-on-stack-9cf70ab07583">OP_CHECKSIGFROMSTACK</a>,
+<a
+href="https://medium.com/@aaron.recompile/op-checktemplateverify-on-signet-locking-outputs-at-utxo-creation-time-1d623fbe3899">OP_CHECKTEMPLATEVERIFY</a>,
+<a
+href="https://medium.com/@aaron.recompile/sighash-anyprevout-on-signet-when-signatures-stop-binding-to-utxos-eed4fc475668">SIGHASH_ANYPREVOUT</a>
+— are in the companion <a
+href="https://medium.com/@aaron.recompile">signet series</a>. Specs: <a
+href="https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki">BIP-341/342</a>
+(tapscript &amp; OP_SUCCESS), <a
+href="https://github.com/bitcoin/bips/blob/master/bip-0119.mediawiki">BIP-119</a>
+(CTV), <a
+href="https://github.com/bitcoin/bips/blob/master/bip-0118.mediawiki">BIP-118</a>
+(APO).</em></p>
+
+<p><a class="cta" href="./explorer.html">▶ Open the interactive Upgrade-Slot Explorer</a></p>
+<div class="foot">Part of <a href="./">The Grammar of Bitcoin's Extensibility</a>. Every byte from real signet transactions.</div>
+</main></body></html>

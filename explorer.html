@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>The Upgrade-Slot Explorer — Grammar of Bitcoin's Extensibility</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--dim:#8b949e;--accent:#58a6ff;
+    --op:#f0883e;--push:#58a6ff;--data:#6e7681;--magic:#db61a2;--ok:#2ea043;--empty:#484f58;--warn:#d29922}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  code,.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 18px 90px}
+  h1{font-size:22px;margin:0 0 4px} h1 .cn{color:var(--dim);font-size:15px;font-weight:400}
+  .sub{color:var(--dim);margin:0 0 18px;max-width:880px}
+  .topbar{font-size:13px;margin-bottom:14px} .topbar a{color:var(--accent);text-decoration:none}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:0 0 12px}
+  /* selector */
+  .picker{display:block}
+  .pgroup{margin-bottom:13px} .pgroup:last-child{margin-bottom:0}
+  .pglabel{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:0 0 6px}
+  .prow{display:flex;flex-wrap:wrap;gap:8px}
+  .picker button{background:#1b222b;color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:9px 13px;cursor:pointer;font-size:14px;text-align:left;min-width:120px}
+  .picker button .r{display:block;font-size:11px;color:var(--dim)}
+  .picker button.on{border-color:var(--accent);background:#12233b}
+  .picker button.on .r{color:var(--accent)}
+  .cols{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}
+  @media(max-width:840px){.cols{grid-template-columns:1fr}}
+  /* bytes */
+  .bytes{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+  .chip{border:1px solid var(--line);border-radius:7px;padding:6px 9px;min-width:44px;background:#1b222b}
+  .chip .h{font-family:"SF Mono",monospace;font-size:13px}
+  .chip .l{font-size:10px;color:var(--dim);margin-top:2px;white-space:nowrap}
+  .chip.op{border-color:var(--op)} .chip.op .h{color:var(--op)}
+  .chip.push{border-color:var(--push)} .chip.push .h{color:var(--push)}
+  .chip.data{border-color:var(--line)} .chip.data .h{color:var(--data)}
+  .chip.magic{border-color:var(--magic)} .chip.magic .h{color:var(--magic)}
+  .chip.hl{box-shadow:0 0 0 2px var(--op) inset;background:#2a1c10}
+  .meta{color:var(--dim);font-size:12px;margin-top:12px;line-height:1.7}
+  .meta b{color:var(--fg)} .meta a{color:var(--accent)}
+  .addr-label,.reveal-label{font-size:11.5px;color:var(--dim);margin:2px 0 6px}
+  .reveal-label{margin-top:14px;color:var(--fg);border-top:1px dashed var(--line);padding-top:12px}
+  .reveal-label b{color:var(--op)}
+  .bytes.dim .chip{opacity:.5} .bytes.dim .chip .h{font-size:12px}
+  /* onion */
+  .onion .layer{border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin:6px 0;font-size:12.5px;color:var(--dim);position:relative}
+  .onion .layer .n{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+  .onion .layer .t{color:var(--fg);font-size:13px}
+  .onion .layer.here{border-color:var(--accent);background:#12233b;color:var(--fg)}
+  .onion .layer.here .n{color:var(--accent)}
+  .onion .split{display:flex;gap:8px} .onion .split .layer{flex:1;margin:6px 0}
+  .onion .ladder{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .onion .rung{font-size:10.5px;border:1px solid var(--line);border-radius:5px;padding:3px 7px;color:var(--dim);line-height:1.35}
+  .onion .rung b{font-family:"SF Mono",monospace;color:var(--fg)} .onion .rung i{font-style:normal;color:var(--dim);margin-left:5px}
+  .onion .rung.here{border-color:var(--accent);background:#12233b} .onion .rung.here b{color:var(--accent)}
+  .onion .rung.used{border-color:#1c3a29;background:#0f2417} .onion .rung.used b{color:var(--ok)}
+  .onion .rung.res{border-style:dashed;color:var(--empty)} .onion .rung.res b{color:var(--empty)} .onion .rung.res i{color:var(--empty)}
+  .fossil{margin-top:12px;padding:10px 12px;border:1px dashed var(--warn);border-radius:8px;font-size:12.5px;color:var(--fg)}
+  .fossil b{color:var(--warn)}
+  /* before/after */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+  .ba .cell{border-radius:8px;padding:10px 12px;font-size:12.5px}
+  .ba .before{background:#161b22;border:1px solid var(--line);color:var(--dim)}
+  .ba .after{background:#0f2417;border:1px solid #1c3a29}
+  .ba .k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+  .ba .before .k{color:var(--dim)} .ba .after .k{color:var(--ok)}
+  .fp{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:12.5px;color:var(--dim)}
+  .fp b{color:var(--fg)} .fp .big{color:var(--op);font-weight:700}
+  /* inventory */
+  .inv .row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line);font-size:12.5px}
+  .inv .row:first-child{border-top:0}
+  .inv .name{flex:0 0 190px;color:var(--fg)}
+  .inv .slots{flex:1;display:flex;flex-wrap:wrap;gap:4px}
+  .inv .s{width:22px;height:22px;border-radius:5px;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-family:monospace}
+  .inv .s.used{background:#0f2417;border-color:#1c3a29;color:var(--ok)}
+  .inv .s.empty{background:#161b22;color:var(--empty)}
+  .inv .cap{flex:0 0 100%;color:var(--dim);margin-top:2px}
+  .punch{margin-top:14px;font-size:15px;color:var(--fg)} .punch b{color:var(--op)}
+  .foot{color:var(--dim);font-size:12px;margin-top:22px;border-top:1px solid var(--line);padding-top:12px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">← <a href="./">The Grammar of Bitcoin's Extensibility</a></div>
+  <h1>The Upgrade-Slot Explorer <span class="cn">· 升级插槽浏览器</span></h1>
+  <p class="sub">Bitcoin doesn't add a feature by inventing a new byte. It <b>reserves slots</b> in advance, then
+  fills them. Pick a proposal below and watch — on <i>real signet bytes</i> — which reserved slot it
+  plugs into, and why the block explorer still shows it under its <b>pre-activation name</b>.</p>
+
+  <div class="panel">
+    <h2>Pick a proposal (real on-chain leaf)</h2>
+    <div class="picker" id="picker"></div>
+  </div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>The real bytes <span id="txlab" style="text-transform:none;letter-spacing:0"></span></h2>
+      <div class="addr-label">the address (scriptPubKey) — the identical <code>5120…</code> shape on every card:</div>
+      <div class="bytes dim" id="bytes-addr"></div>
+      <div class="reveal-label" id="reveal-label"></div>
+      <div class="bytes" id="bytes"></div>
+      <div class="meta" id="bytemeta"></div>
+    </div>
+    <div class="panel">
+      <h2>Which slot does it plug into?</h2>
+      <div class="onion" id="onion"></div>
+      <div class="fossil" id="fossil"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>The dramatic reveal — same byte, before vs after the soft fork</h2>
+    <div class="ba"><div class="cell before"><div class="k">before activation</div><div id="before"></div></div>
+      <div class="cell after"><div class="k">after activation</div><div id="after"></div></div></div>
+    <div class="fp" id="fp"></div>
+  </div>
+
+  <div class="panel inv">
+    <h2>The slot inventory — how many unopened slots is Bitcoin still holding?</h2>
+    <div id="inv"></div>
+    <div class="punch">Count them: <b id="count">…</b> reserved-but-empty upgrade slots. Every future soft fork
+    has to fit one of these shapes — or add a brand-new one. <b>That</b> is the grammar of Bitcoin's extensibility.</div>
+  </div>
+
+  <div class="foot">Every byte here is from Aaron's real signet transactions (see the artifact ledger).
+  Companion to <a href="./">the booklet</a> and the <a href="../what-a-signature-can-see/">sighash playground</a>.</div>
+</div>
+
+<script>
+const KEY="ff1f9fa3…9986b8"; // shared root x-only key across CSFS / IK / APO
+const ADDR=[ {h:"51",cls:"op",l:"OP_1 (v1)"},{h:"20",cls:"push",l:"PUSH32"},{h:"&lt;32B output key&gt;",cls:"data",l:"the tweaked key"} ];
+const P=[
+ { id:"keypath", name:"key-path", cn:"默认长相 · 对照组", role:"the baseline",
+   txid:"386dbb6a…d54a9c41", txlab:"(signet, Eltoo fund)",
+   bytes:[ {h:"&lt;64-byte Schnorr signature&gt;",cls:"data",l:"the whole witness — no script"} ],
+   meta:"This is Taproot's <b>default look</b>: a plain <code>5120…</code> address, spent by key-path. The witness reveals nothing — no leaf, no opcode. Same <code>tb1p…</code> shape as every card below, yet nothing is hidden. It's the control group: <b>the address never tells you which slot a coin uses.</b>",
+   slot:"keypath",
+   fossil:"Nothing to see — no leaf script is revealed. The upgrade machinery only appears once you spend by <i>script</i>-path (the other cards).",
+   before:"—", after:"—",
+   fp:[["push length","n/a — no pubkey in a leaf"],["touches stack?","just verifies one signature"],["control block","none (key-path)"]] },
+
+ { id:"cat", name:"OP_CAT", cn:"组装", role:"assemble", bip:"BIP-347",
+   txid:"00072d4a…b2d05656", txlab:"(signet, CAT hashlock reveal)",
+   bytes:[ {h:"7e",cls:"op",l:"OP_CAT",hl:1},{h:"a8",cls:"op",l:"OP_SHA256"},{h:"20",cls:"push",l:"PUSH32"},{h:"936a185c…07af",cls:"data",l:"32B hash"},{h:"87",cls:"op",l:"OP_EQUAL"} ],
+   meta:"witness data: <code>68656c6c6f</code>=\"hello\", <code>776f726c64</code>=\"world\". CAT joins them, hashes, compares.",
+   slot:"opsuccess",
+   fossil:"Explorer shows <code>0x7e</code> as <b>OP_SUCCESS126</b> — that name is the byte's pre-activation identity, and it's the proof CAT lives in the <b>OP_SUCCESS slot</b> (tapscript-only). <span style='color:var(--warn)'>⚠ display name from the paper, verify on your own CAT tx before publishing.</span>",
+   before:"OP_SUCCESS126 → the <b>entire leaf succeeds unconditionally</b>. Old tapscript nodes see this byte and immediately pass the script.",
+   after:"pop two items off the stack, push their <b>concatenation</b>. It now reads and rewrites the stack.",
+   fp:[["push length","32-byte data pushes"],["touches stack?","<span class='big'>YES</span> — pop 2, push 1"],["control block","c0 · leaf ver 0xc0"]] },
+
+ { id:"csfs", name:"OP_CHECKSIGFROMSTACK", cn:"授权", role:"authorize", bip:"BIP-348",
+   txid:"51fceec6…d04dc63e", txlab:"(signet, CSFS rekey reveal)",
+   bytes:[ {h:"20",cls:"push",l:"PUSH32"},{h:"ff1f9fa3…9986b8",cls:"data",l:"32B x-only key"},{h:"cc",cls:"op",l:"OP_CHECKSIGFROMSTACK",hl:1},{h:"69",cls:"op",l:"OP_VERIFY"},{h:"cc",cls:"op",l:"OP_CHECKSIGFROMSTACK"} ],
+   meta:"CSFS verifies a signature over <i>any message you hand it on the stack</i> — unlike <code>OP_CHECKSIG</code>, which only ever verifies one over <i>this transaction</i>. It shows up <b>twice</b> here (<code>cc … 69 … cc</code>) because this leaf is a <b>rekey / delegation</b>, not a plain check: the 1st <code>cc</code> verifies the guardian key <b>"+KEY+"</b>'s off-chain signature over \"I delegate to key B\" (then <code>OP_VERIFY</code>); the 2nd <code>cc</code> verifies that B's signature authorizes this spend. A hands the coin to B, B spends it — a one-hop key rotation, enforced on-chain. (The plainest CSFS is a single <code>cc</code>; this one runs two to show off delegation.) The key is a bare <b>32-byte</b> x-only push — the same key wears a <b>33-byte</b> <code>0x01</code> hat under APO.",
+   slot:"opsuccess",
+   fossil:"Explorer shows <code>0xcc</code> (=204) as <b>OP_RETURN_204</b> ✅ (verified on Delving /2430). That fossil name is the proof CSFS lives in the <b>OP_SUCCESS slot</b> — a different slot from CTV.",
+   before:"OP_RETURN_204 / OP_SUCCESS204 → <b>leaf succeeds unconditionally</b> on old tapscript nodes.",
+   after:"pop signature, message, pubkey; push a <b>boolean</b>. Reads and rewrites the stack.",
+   fp:[["push length","<span class='big'>32</span> — bare x-only key"],["touches stack?","<span class='big'>YES</span> — pop 3, push 1"],["control block","c1 · leaf ver still 0xc0 (just y-parity)"]] },
+
+ { id:"ik", name:"OP_INTERNALKEY", cn:"引用", role:"reference", bip:"BIP-349",
+   txid:"545450ac…fae58ffa", txlab:"(signet, IK reveal)",
+   bytes:[ {h:"cb",cls:"op",l:"OP_INTERNALKEY",hl:1},{h:"20",cls:"push",l:"PUSH32"},{h:"ff1f9fa3…9986b8",cls:"data",l:"expected key"},{h:"87",cls:"op",l:"OP_EQUAL"} ],
+   meta:"Pushes the Taproot <b>internal key</b> onto the stack, then <code>OP_EQUAL</code> checks it against the expected one — the same root key "+KEY+", a bare <b>32-byte</b> push.",
+   slot:"opsuccess",
+   fossil:"Byte <code>0xcb</code> (=203) → <b>OP_SUCCESS203</b> slot. Like CAT and CSFS, it has to move the stack (it <i>pushes</i> the internal key), so it can't use the NOP slot — only OP_SUCCESS will do.",
+   before:"OP_SUCCESS203 → leaf succeeds unconditionally on old nodes.",
+   after:"<b>push the internal key</b> from the control block onto the stack.",
+   fp:[["push length","32 — x-only key"],["touches stack?","<span class='big'>YES</span> — pushes a key"],["control block","c1 · leaf ver 0xc0"]] },
+
+ { id:"ctv", name:"OP_CHECKTEMPLATEVERIFY", cn:"强制", role:"enforce", bip:"BIP-119",
+   txid:"9ccbce8a…f220d55c", txlab:"(signet, CTV reveal)",
+   bytes:[ {h:"20",cls:"push",l:"PUSH32"},{h:"32eb42…f03b42",cls:"data",l:"32B template hash"},{h:"b3",cls:"op",l:"OP_NOP4",hl:1} ],
+   meta:"Pushes a 32-byte <b>template hash</b>, then <code>OP_NOP4</code> checks the spending transaction matches it. It <b>peeks, never pops</b> — a read-only check.",
+   slot:"nop",
+   fossil:"Explorer shows <code>0xb3</code> (=179) as <b>OP_NOP4</b> ✅ (verified). A <i>different</i> fossil name from CSFS's OP_RETURN_204 — because CTV lives in the <b>NOP slot</b>, not OP_SUCCESS. That one display-name difference <i>is</i> the mechanism difference.",
+   before:"OP_NOP4 → <b>does nothing</b> (a no-op). Old nodes ignore it and keep validating the rest.",
+   after:"<b>check</b> the transaction matches the committed template; fail if it doesn't. Never touches the stack data.",
+   fp:[["push length","32 — a hash, not a pubkey"],["touches stack?","<span class='big'>NO</span> — peek only (why it fits a NOP)"],["control block","c0 · leaf ver 0xc0"]] },
+
+ { id:"apo", name:"SIGHASH_ANYPREVOUT", cn:"签名层 · 不是 opcode", role:"not an opcode", bip:"BIP-118",
+   txid:"096e31cc…fe195601", txlab:"(signet, APO Eltoo state)",
+   bytes:[ {h:"21",cls:"push",l:"PUSH33",hl:1},{h:"01",cls:"magic",l:"0x01 magic",hl:1},{h:"ff1f9fa3…9986b8",cls:"data",l:"same key"},{h:"ac",cls:"op",l:"OP_CHECKSIG"} ],
+   meta:"Same root key "+KEY+" as CSFS — but here it's <b>33 bytes</b> (<code>21</code>), wearing a <code>0x01</code> hat, feeding a <b>plain OP_CHECKSIG</b>. APO adds <b>no new opcode at all</b>.",
+   slot:"sighash",
+   fossil:"There's no fossil opcode name to reveal — the opcode is just ordinary <code>OP_CHECKSIG</code> (0xac). APO doesn't live in an opcode slot at all. Its whole mechanism is that <b>0x01 prefix + new sighash flags</b>, one layer deeper than opcodes.",
+   before:"A <code>0x01</code>-prefixed 33-byte pubkey was an <b>unknown/undefined key type</b>.",
+   after:"the <code>0x01</code> prefix flips OP_CHECKSIG into <b>anyprevout mode</b> — the signature stops committing to which UTXO it spends.",
+   fp:[["push length","<span class='big'>33</span> — the 0x01 hat (vs 32 for CSFS: same key!)"],["touches stack?","ordinary checksig; the trick is in the sighash"],["control block","c0 · and Spend A/B reuse the identical witness on two UTXOs"]] },
+];
+
+const META={
+ keypath:{abbr:"key-path",full:"386dbb6aa23fcc35a69d34e3c0f760b185482467abc936196d3def19d54a9c41"},
+ cat:{abbr:"CAT",full:"00072d4aa354b5987eb8f2ffec440db7467b0581c5e845a6a0ef6999b2d05656"},
+ csfs:{abbr:"CSFS",full:"51fceec6d6357e8804b544bac2a6c9daf6503041e13fa0ea0a73a2ccd04dc63e"},
+ ik:{abbr:"IK",full:"545450ac39d7f9b20436007545002b296dcab0acc72e2a82dffdb32cfae58ffa"},
+ ctv:{abbr:"CTV",full:"9ccbce8ad87f0f94632119245a42537c9fbd2c8f706621f76f513339f220d55c"},
+ apo:{abbr:"APO",full:"096e31ccbd8f5460b2730ec4f757ee1b01acf9dde3e3b8cb55fbb534fe195601"},
+};
+P.forEach(p=>Object.assign(p, META[p.id]));
+
+const LAYERS=[
+ {id:"v", n:"Layer 1 · witness version", t:"which version is this coin? — itself a ladder, mostly empty:", slots:["keypath"],
+   ladder:[{k:"v0",v:"SegWit · bc1q",s:"used"},{k:"v1",v:"Taproot · bc1p ← all examples here",s:"here"},{k:"v2–v16",v:"reserved · where a future quantum-resistant scheme would likely land",s:"res"}]},
+ {id:"leaf", n:"Layer 2 · leaf version", t:"first byte packs TWO fields: leaf version (bits 1–7, &amp; 0xfe) | parity of output key Q (bit 0). c0/c1 = same leaf ver, different parity:", slots:[],
+   ladder:[{k:"0xc0",v:"tapscript · every leaf on this page",s:"here"},{k:"0xc2",v:"tapscript v2 · GSR (BIP-440/441) — defined in tooling, no on-chain example yet",s:"res"},{k:"0xc4…",v:"reserved",s:"res"}]},
+ {id:"opcode", n:"Layer 3 · the opcode slot", t:"", split:true},
+ {id:"sighash", n:"Layer 4+5 · sighash flag + pubkey prefix (signature layer)", t:"the 0x01 hat, the SIGHASH byte", slots:["sighash"]},
+ {id:"annex", n:"Layer 6 · annex 0x50", t:"the empty pocket — reserved, still unused", slots:[]},
+];
+
+const picker=document.getElementById('picker');
+const byId={}; P.forEach((p,i)=>byId[p.id]=i);
+const GROUPS=[
+ {label:"baseline · 对照组(没走升级槽)", ids:["keypath"]},
+ {label:"OP_SUCCESS slot · 动栈,tapscript-only", ids:["cat","csfs","ik"]},
+ {label:"NOP slot · 只读检查", ids:["ctv"]},
+ {label:"not an opcode · 签名层(公钥前缀 + sighash flag)", ids:["apo"]},
+];
+GROUPS.forEach(g=>{
+  const wrap=document.createElement('div');wrap.className='pgroup';
+  const lbl=document.createElement('div');lbl.className='pglabel';lbl.textContent=g.label;wrap.appendChild(lbl);
+  const row=document.createElement('div');row.className='prow';
+  g.ids.forEach(id=>{const i=byId[id],p=P[i];const b=document.createElement('button');b.dataset.i=i;
+    b.innerHTML=`<b style="font-size:15px">${p.abbr}</b><span class="r">${p.name!==p.abbr?p.name+' · ':''}${p.cn} · ${p.role}</span>`;
+    b.onclick=()=>select(i);row.appendChild(b);});
+  wrap.appendChild(row);picker.appendChild(wrap);
+});
+
+function chipHTML(c){return `<div class="chip ${c.cls} ${c.hl?'hl':''}"><div class="h mono">${c.h}</div><div class="l">${c.l}</div></div>`;}
+function ladderHTML(rungs){return `<div class="ladder">`+rungs.map(r=>`<span class="rung ${r.s}"><b>${r.k}</b>${r.v?`<i>${r.v}</i>`:''}</span>`).join('')+`</div>`;}
+
+function select(i){
+  const p=P[i];
+  picker.querySelectorAll('button').forEach(b=>b.classList.toggle('on', +b.dataset.i===i));
+  document.getElementById('txlab').innerHTML=` — <a class="mono" href="https://mempool.space/signet/tx/${p.full}" target="_blank" rel="noopener">${p.txid}</a> <span style="color:var(--dim)">${p.txlab} · mempool.space/signet</span>`;
+  document.getElementById('bytes-addr').innerHTML=ADDR.map(chipHTML).join('');
+  const isKp=p.slot==='keypath';
+  document.getElementById('reveal-label').innerHTML=isKp?`↓ spent by <b>key-path</b> — the entire witness is just:`:`↓ spend by <b>script-path</b>, and the witness reveals this leaf:`;
+  document.getElementById('bytes').innerHTML=p.bytes.map(chipHTML).join('');
+  document.getElementById('bytemeta').innerHTML=p.meta;
+  // onion
+  let oh='';
+  for(const L of LAYERS){
+    if(L.split){
+      const nopHere=(p.slot==='nop'), okHere=(p.slot==='opsuccess');
+      oh+=`<div class="n" style="font-size:10px;text-transform:uppercase;color:var(--dim);margin:8px 0 2px">${L.n}</div><div class="split">
+        <div class="layer ${nopHere?'here':''}"><div class="n">NOP slot</div><div class="t">check-only upgrades (OP_NOP4)</div></div>
+        <div class="layer ${okHere?'here':''}"><div class="n">OP_SUCCESS slot</div><div class="t">stack-moving upgrades (tapscript-only)</div></div>
+      </div>`;
+    } else {
+      const here=L.slots.includes(p.slot);
+      oh+=`<div class="layer ${here?'here':''}"><div class="n">${L.n}</div><div class="t">${L.t}</div>${L.ladder?ladderHTML(L.ladder):''}</div>`;
+    }
+  }
+  document.getElementById('onion').innerHTML=oh;
+  document.getElementById('fossil').innerHTML=p.fossil;
+  document.getElementById('before').innerHTML=p.before;
+  document.getElementById('after').innerHTML=p.after;
+  document.getElementById('fp').innerHTML=p.fp.map(f=>`<div><b>${f[0]}:</b> ${f[1]}</div>`).join('');
+}
+
+// inventory
+const INV=[
+ {name:"witness versions (v0–v16)", used:[["v0","P2WPKH/WSH"],["v1","Taproot"]], total:17, note:"v2–v16 reserved and empty → 15 open"},
+ {name:"leaf versions", used:[["c0","tapscript"]], total:8, sample:true, note:"0xc0 used; the rest of the range reserved"},
+ {name:"NOP slots (OP_NOP1–10)", used:[["N2","CLTV"],["N3","CSV"],["N4","CTV*"]], total:10, note:"CLTV, CSV used; CTV proposed for NOP4; rest open"},
+ {name:"OP_SUCCESSx (tapscript)", used:[["CAT",""],["CSFS",""],["IK",""]], total:80, approx:true, note:"~80 OP_SUCCESS bytes; a handful used, ~77 open"},
+ {name:"annex (0x50)", used:[], total:1, note:"reserved, entirely unused — the empty pocket"},
+];
+function renderInv(){
+  let h='',open=0;
+  for(const r of INV){
+    const usedN=r.used.length, openN=(r.approx? 77 : r.total-usedN); open+=openN;
+    let cells='';
+    r.used.forEach(u=>cells+=`<span class="s used" title="${u[1]}">${u[0]}</span>`);
+    const showEmpty=Math.min(r.approx?12:(r.total-usedN), 16);
+    for(let k=0;k<showEmpty;k++) cells+=`<span class="s empty">▢</span>`;
+    if(r.approx) cells+=`<span class="s empty" style="width:auto;padding:0 6px">+65…</span>`;
+    h+=`<div class="row"><div class="name">${r.name}</div><div class="slots">${cells}<div class="cap">${r.note}</div></div></div>`;
+  }
+  document.getElementById('inv').innerHTML=h;
+  document.getElementById('count').textContent="~100+";
+}
+renderInv(); select(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/><title>比特币的扩展性语法学</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--dim:#8b949e;--accent:#58a6ff;--op:#f0883e;--ok:#2ea043}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+.topbar{position:sticky;top:0;background:rgba(13,17,23,.9);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:11px 20px;font-size:14px}
+.topbar a{color:var(--accent);text-decoration:none} .topbar a:hover{text-decoration:underline}
+main{max-width:760px;margin:0 auto;padding:34px 22px 100px}
+h1{font-size:30px;line-height:1.25;margin:8px 0 8px}
+h2{font-size:22px;margin:44px 0 14px;padding-top:22px;border-top:1px solid var(--line)}
+h3{font-size:17px;color:var(--dim);font-weight:600;margin:0 0 22px}
+h1+*,h2+*{margin-top:0}
+p,li{color:#c9d1d9} strong,b{color:var(--fg)}
+a{color:var(--accent)} a:hover{text-decoration:underline}
+blockquote{margin:18px 0;padding:6px 18px;border-left:3px solid var(--accent);background:#12182080;color:var(--dim);border-radius:0 6px 6px 0}
+code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:14px 16px;overflow:auto}
+pre code{background:none;border:0;padding:0;font-size:13px;line-height:1.6;color:var(--op)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;display:block;overflow:auto}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+th{background:var(--panel);color:var(--fg)}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+em{color:#c9d1d9} ul,ol{padding-left:24px}
+.cta{display:inline-block;background:var(--op);color:#0d1117;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:8px;margin:10px 0}
+.foot{color:var(--dim);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+</style></head><body>
+<div class="topbar">← <a href="./">The Grammar of Bitcoin's Extensibility · 比特币的扩展性语法学</a></div>
+<main>
+<h1 id="比特币的扩展性语法学">比特币的扩展性语法学</h1>
+<h2 id="升级插槽的字节级解剖">升级插槽的字节级解剖</h2>
+<h3
+id="比特币不是靠改字节加功能的它预留插槽而区块浏览器至今还用每个插槽激活前的旧名显示它">比特币不是靠"改字节"加功能的。它<strong>预留插槽</strong>——而区块浏览器,至今还用每个插槽"激活前的旧名"显示它。</h3>
+<hr />
+<p>这里有五枚比特币。在区块浏览器上,五个地址长得一模一样:<code>tb1p…</code>、<code>tb1p…</code>、<code>tb1p…</code>。同样的前缀、同样的长度、什么都一样。</p>
+<p>然后你去花它们,witness 打开了。一枚只露出一个签名。一枚用
+<code>OP_CAT</code>
+把字节拼起来。一枚验证一条"任意消息"的签名。一枚强制这枚币下一步只能去哪。一枚做出的签名,居然不再绑定它花的是哪枚
+UTXO。</p>
+<p>同样的
+<code>tb1p</code>,里面藏着天差地别的机器。<strong>一个地址形状,怎么藏得下五种不同的升级机制——而比特币又是怎么不停加新机制、却从不弄坏旧的?</strong></p>
+<p>通常研究这个的方式是问"CTV 能干什么?CAT
+能干什么?"——这是<strong>功能</strong>问题,已经被写烂了。这篇问的是下一层的问题:<strong>在协议的真实字节里,比特币到底把升级的余地预留在了哪些位置,每个预留的插槽能装下什么形状的升级?</strong></p>
+<p>这个问题的答案,能从线格式上一个字节一个字节读出来。下面每个例子都是
+signet 上的真实交易。有一个<a
+href="./explorer.html">交互式浏览器</a>可以让你在它们之间切换、看每个插进哪个槽;这篇文章是那张地图。</p>
+<p>我们从外往里,把洋葱一层层剥开。</p>
+<h2 id="第-1-层--地址里只带了一个版本号">第 1 层 ——
+地址里只带了一个版本号</h2>
+<p>一个 Taproot 输出的脚本是 <code>51 20 &lt;32字节&gt;</code>。也就是
+<code>OP_1</code>(witness <strong>版本 1</strong>)接
+<code>OP_PUSHBYTES_32</code>
+再接输出钥。<code>bc1p</code>/<code>tb1p</code> 里那个
+<code>1</code>,<strong>就是</strong> witness version。</p>
+<p>这是<strong>唯一一个住在地址里</strong>的升级层。接下来要见的所有东西都藏在
+witness 里,不花就永远看不见。所以地址什么都告诉不了你:一枚纯 key-path
+的币(<code>386dbb6a…</code>,witness = 一个 64
+字节签名、根本没有脚本),和下面那些 covenant 币穿的是同一件
+<code>tb1p</code>。</p>
+<p>而且注意这一层本身就是一架梯子:<code>v0</code> 是
+SegWit(<code>bc1q</code>),<code>v1</code> 是
+Taproot(<code>bc1p</code>,我们五枚币都在这),而 <strong><code>v2</code>
+到 <code>v16</code>
+已定义、全空着</strong>——十五级没碰过的横档。比特币哪天要加一套抗量子签名方案,最自然的挂法就是往上开一个新的
+witness version。</p>
+<h2 id="第-2-层--控制块首字节基本上是个谎">第 2 层 ——
+控制块首字节(基本上)是个谎</h2>
+<p>走 script-path 花费,witness
+最后一项是<em>控制块</em>。人们爱往它首字节里读含义。我们例子里 APO
+那笔是 <code>c0</code>、CSFS 那笔是
+<code>c1</code>,很容易以为这个差别<em>意味着</em>升级机制上的什么。</p>
+<p>不是——而且精确原因值得钉死。那个首字节把<strong>两个字段塞进了一个字节</strong>:高
+7 位(<code>&amp; 0xfe</code>)是 <strong>leaf version</strong>,最低 1
+位(<code>&amp; 0x01</code>)是一个 <strong>parity 位</strong>——taproot
+<strong>输出钥 Q</strong> 的 Y 坐标奇偶(Q 在 scriptPubKey 里只存
+x-only,验证者要靠这一位才能重算 taproot commitment)。所以
+<code>c0</code> 和 <code>c1</code> 是<strong>同一个</strong> leaf
+version——<code>0xc0</code>,标准 tapscript——只是 parity
+相反;要看到真·不同的 leaf version,得是 <code>0xc2</code>。leaf version
+才是那个可能承载升级的部分,而我们看的每片叶子它都是
+<code>0xc0</code>。<em>下一个</em> leaf version <code>0xc2</code>
+其实已经<strong>定义</strong>了——就是"tapscript v2"方言(Great Script
+Restoration
+那条线,BIP-440/441)——但这里还没有它的链上样本:工具造好了,门还没开,是个预留的空槽。再上面的偶数值也都预留、空着。</p>
+<p>所以第 2 层是个真插槽,但我们的升级不住这。两枚币可以一个显示
+<code>c0</code>、一个 <code>c1</code>,却跑着<em>同一个</em> leaf
+version。这篇你要是只记住一条辟谣:<strong><code>c0</code> vs
+<code>c1</code> 是奇偶,不是机制。</strong></p>
+<h2 id="第-3-层--opcode-插槽和它名字里的化石">第 3 层 —— opcode
+插槽,和它名字里的化石</h2>
+<p>现在到核心了。叶子内部,那个
+opcode。而这里比特币有<strong>两个不同的预留插槽</strong>——这是整幅图里最重要、也最没人讲清楚的一个区分。</p>
+<p>把两片叶子并排看:</p>
+<pre><code>CTV  (9ccbce8a…):   20 &lt;32B 模板hash&gt;  b3
+                                       ▲ OP_NOP4
+CSFS (51fceec6…):   20 ff1f9fa3…9986b8  cc  69  cc
+                                        ▲ OP_CHECKSIGFROMSTACK</code></pre>
+<p>在区块浏览器上,那个 <code>b3</code> 显示成
+<strong><code>OP_NOP4</code></strong>,那个 <code>cc</code> 显示成
+<strong><code>OP_RETURN_204</code></strong>。这不是
+bug,也不是随便标的。<strong>显示名,是这个字节"激活前的身份证"——一块化石。</strong>
+而两块化石不同,恰恰因为 CTV 和 CSFS 占的是两个不同的预留插槽:</p>
+<ul>
+<li><p><strong>NOP 插槽。</strong> <code>OP_NOP1…OP_NOP10</code>
+当初被造出来就是<em>什么都不做</em>的——空操作。软分叉可以把其中一个重定义成"某条件不满足就中止"。它能做的仅此而已:一个只读检查。它<strong>不能碰栈</strong>,因为旧节点仍把这个字节当空操作,两边必须得出同一个结论。<strong>CTV
+住这</strong>——它只是 peek 一眼模板 hash,问"这笔交易匹配吗?",从不
+pop、从不 push。所以它能住进朴素的 NOP
+槽(<code>OP_NOP4</code>),而且——因为 NOP 升级是跨上下文的——它连 Taproot
+之外都能用。</p></li>
+<li><p><strong>OP_SUCCESS 插槽。</strong> Tapscript(BIP-342)引入了一组约
+80 个 <code>OP_SUCCESSx</code>
+字节,带一个野性的性质:激活前,遇到它就让<strong>整片叶子无条件成功</strong>。这是<em>最宽松</em>的行为。而正是这一点让它能被重定义成<em>任何东西</em>——因为任何新规则,无论多严,只会让一个"原本必过"的脚本<em>更容易失败</em>,绝不会让它放行本不该放行的东西。所以一个
+OP_SUCCESS opcode
+可以自由地<strong>读写栈</strong>。<code>OP_CAT</code>(pop 两个、push
+拼接)、<code>OP_CHECKSIGFROMSTACK</code>(pop 签名/消息/公钥、push
+布尔)、<code>OP_INTERNALKEY</code>(push
+内部钥)——全都要动栈,所以全都<strong>必须</strong>用 OP_SUCCESS
+槽,没有一个塞得进 NOP。</p></li>
+</ul>
+<p>这就是规则,而且不是品味问题——是被 opcode 的行为逼出来的:</p>
+<pre><code>新 opcode 要动栈吗?
+  ├─ 不动,只判通过/失败  → NOP 槽        → CTV          (浏览器:OP_NOP4)
+  └─ 要读/写栈           → OP_SUCCESS 槽  → CAT/CSFS/IK  (浏览器:OP_SUCCESS/RETURN_x)</code></pre>
+<p>这件事最戏剧性的版本,在浏览器"激活前"那一栏。昨天,一片 tapscript 里的
+<code>0x7e</code> 是"这片叶子无条件通过、别问"。今天,同一个字节 pop
+出两个栈元素、把它们拼起来。<strong>软分叉没加一个字节——它悄悄换掉了一个本已存在的字节的含义。</strong>
+这种偷换,在几个预留字节上反复上演,就是比特币成长的大半方式。</p>
+<h2 id="第-45-层--那枚根本不是-opcode-的币">第 4/5 层 —— 那枚根本不是
+opcode 的币</h2>
+<p>现在是最特别的一个。<code>SIGHASH_ANYPREVOUT</code>(APO)是 covenant
+邻域的超能力——Eltoo、Lightning Symmetry——你会以为它也是个
+opcode。它不是。</p>
+<p>把它的叶子(<code>096e31cc…</code>)和 CSFS
+的叶子并排,盯着那把<strong>同一个公钥</strong>:</p>
+<pre><code>CSFS: 20   ff1f9fa3…9986b8      cc   ← 32字节 push,裸 x-only 公钥
+APO:  21 01 ff1f9fa3…9986b8     ac   ← 33字节 push,一顶 0x01 帽子,普通 OP_CHECKSIG</code></pre>
+<p>同一段公钥材料 <code>ff1f9fa3…9986b8</code>。在 CSFS 叶里被 push 成
+<strong>32 字节</strong>。在 APO 叶里是 <strong>33</strong>——戴了顶
+<code>0x01</code> 帽子——而它后面的 opcode 只是个普通的
+<code>OP_CHECKSIG</code>(<code>ac</code>)。<strong>APO 根本没加任何新
+opcode。</strong> 它的全部机制就是那顶一字节帽子 + 一组新的 sighash
+flag:<code>0x01</code> 前缀把 <code>OP_CHECKSIG</code>
+切进<em>anyprevout 模式</em>,让签名不再绑定它花的是哪枚 UTXO。</p>
+<p>所以一把被 push 的公钥"是 32 还是 33
+字节",是这个升级<em>住在哪一层</em>的指纹。32
+字节:公钥被直接用(CSFS、CTV 的 hash、IK)。33 字节带
+<code>0x01</code>:公钥是个模式开关,真正的机器在更深一层、在签名里。(这个"深一层"最漂亮的证明:APO
+的两笔花费 <code>03c0577c…</code> 和 <code>46091190…</code>,在两枚不同的
+UTXO 上带着<strong>逐字节相同的
+witness</strong>——一个真的不在乎自己花的是哪枚币的签名。)</p>
+<h2 id="第-6-层--那个空口袋">第 6 层 —— 那个空口袋</h2>
+<p>还有最后一个预留插槽,而且几乎全无文档:<strong>annex</strong>,一个必须以
+<code>0x50</code> 开头的 witness
+字段。它被预留、被签名覆盖,而截至今天——<strong>什么用都没有。</strong>
+一个缝在每笔 Taproot 花费里的空口袋,等着未来某个升级给它含义。</p>
+<p>这一处是地图上真正的空白。任何语言里关于 annex
+的、面向开发者的文字都极少——这正好是插旗的地方:构造一笔真带非空 annex
+的花费,在链上展示签名怎么覆盖它、脚本怎么看不见它。(这个实验,是这个系列还欠的唯一
+artifact——而它值得做,恰恰因为没人做过。)</p>
+<h2 id="旋钮只是预设网格才是整个空间">旋钮只是预设,网格才是整个空间</h2>
+<p>再回到 APO 一下,因为它撬开了一样东西。APO
+蒙掉"我花的是哪枚币"时,不是一整块蒙掉的——它有<strong>两个深浅</strong>:<code>ANYPREVOUT</code>
+蒙掉这枚币的<strong>身份</strong>(prevout),但仍然认它的<strong>脚本</strong>和<strong>金额</strong>;<code>ANYPREVOUTANYSCRIPT</code>
+连脚本和金额也蒙掉。所以,一个签名对一个输入"承诺了什么",从来就不是一个开关——它是一<strong>捆子字段</strong>(身份、脚本、金额、sequence),而
+APO 让你一片一片把它们剥下来。</p>
+<p>现在用这个镜头回看输出侧。<code>SIGHASH_NONE</code>
+蒙掉的是<strong>整个输出</strong>——收款人(脚本、"地址")和金额,一起、粗暴地一刀切掉。可输出也是同一种"捆":一个地址
++
+一个金额。原则上,你<strong>完全可以</strong>只认<strong>金额、不认收款人</strong>,或者只认<strong>收款人、不认金额</strong>。只是标准
+sighash 不给你这个旋钮——<code>ALL / SINGLE / NONE</code>
+是三个粗档预设,压在一张细得多的网格上。</p>
+<p>所以这东西真正的形状,是那 6 种 flag 只透露了一角的:</p>
+<blockquote>
+<p>一个签名,承诺的是交易<strong>子字段的一个子集</strong>——这个输入的身份、那个输入的金额、这个输出的脚本、那个输出的金额、锁定时间……sighash
+flag 只是这张网格上的<strong>几个粗档预设</strong>。APO
+在输入侧多给了几个细档。但网格本身很大,flag 只踩到它几个角。</p>
+</blockquote>
+<p>回想 sighash 小册子《<a
+href="https://sighash.bitcoincoding.dev/">签名能看见什么</a>》里那对
+<strong>看(SEE)/ 蒙(BLIND)</strong> 旋钮:一个 flag
+只能整块翻。底下这张网格更细——</p>
+<pre><code>   粗档旋钮(一个 sighash flag)              底下那张细网格
+   输出:  ALL / SINGLE / NONE              每个输入  = [ 身份 | 脚本 | 金额 ]
+   输入:  都认 / 只我(ACP) / 都不认(APO)     每个输出  = [ 地址 | 金额 ]
+
+                    身份     脚本    金额
+          输入 0     ● 看     ● 看    ● 看
+          输入 1     ○ 蒙     ● 看    ● 看     ← APO 只蒙掉输入1的身份
+          输出 0      —       ● 看    ○ 蒙     ← 认地址、蒙金额
+          输出 1      —       ○ 蒙    ● 看     ← 蒙地址、认金额
+                     ● = 看(SEE)      ○ = 蒙(BLIND)
+
+   粗档 flag 只能整行翻 —— 网格上几个角。
+   CAT + CSFS 能翻任意一格:想认哪几格就粘哪几格,再验。</code></pre>
+<p>而<strong>这里</strong>,它才从冷知识变成了要紧事。因为有一种办法能踩到网格上<strong>任意</strong>一点——不是预设,而是任你挑的、任意可承诺子字段的子集:你用
+<code>OP_CAT</code> <strong>亲手一段一段把要签的 message
+拼出来</strong>,再用 <code>OP_CHECKSIGFROMSTACK</code> 对着这张亲手拼的
+message 验签。想只认输出 2
+的<strong>金额</strong>、别的都不认?把那一格粘出来、签、验。只认
+prevouts、不认金额?同一招。<strong>粗档 flag
+从来只是一段连续体上的采样点;CAT+CSFS
+把整段连续体变成可寻址的。</strong></p>
+<p>这就是为什么"证明 CAT+CSFS
+能复现这些承诺"不是脚注。它说的是:<strong>整张网格——<code>SIGHASH_ALL</code>、<code>ANYONECANPAY</code>、<code>SINGLE</code>、<code>ANYPREVOUT</code>
+各自只踩到一个粗档角落的那张网格——今天,用已经激活的操作码,就能手搓着够到每一点。</strong>
+flag 是预设,CAT+CSFS 是整台键盘。</p>
+<h2 id="数一数空着的插槽">数一数空着的插槽</h2>
+<p>退一步,整幅图就是一摞预留插槽,大部分还封着:</p>
+<ul>
+<li>Witness 版本 <strong>v2–v16</strong>:十五个,空。</li>
+<li><code>0xc0</code> 以上的 leaf version:一整段,空。</li>
+<li>NOP opcode:用掉几个(CLTV、CSV),CTV 提案再占一个,其余开着。</li>
+<li>OP_SUCCESS opcode:约 80 个;CAT、CSFS、INTERNALKEY
+占了,还剩约七十七个开着。</li>
+<li>annex:一个空口袋。</li>
+</ul>
+<p>那是<strong>上百个预留但空着的升级插槽</strong>这个量级。每一个未来的软分叉,都得把自己折进这些形状之一——一个只读的
+NOP 检查、一个动栈的 OP_SUCCESS opcode、一个 sighash-flag +
+公钥前缀的把戏、一个新的 witness version、或者那个
+annex——否则就得论证"再加一个新插槽"。<strong>这套约束集——比特币愿意接受一个改动的那些形状——就是它扩展性的语法。</strong>
+它不写在任何一个 BIP 里。它写在字节里。</p>
+<p>关于比特币脚本的写作,大多问一个 opcode
+<em>做什么</em>。这篇问的是它底下那个问题:<em>一个 opcode
+是怎么被允许存在的</em>——而答案,竟然可以一个字节一个字节读出来,就在一个不打开就什么都不给你的
+<code>tb1p</code> 地址上。</p>
+<hr />
+<p><em>本文引用的每一笔交易都在 signet 上。在<a
+href="./explorer.html">交互式浏览器</a>里切换它们。各 opcode
+的逐字节文章——<a
+href="https://medium.com/@aaron.recompile/op-cat-on-signet-concatenation-commitment-and-bitcoin-inquisition-ed34a07866d6">OP_CAT</a>、<a
+href="https://medium.com/@aaron.recompile/op-checksigfromstack-on-signet-sign-anything-verify-on-stack-9cf70ab07583">OP_CHECKSIGFROMSTACK</a>、<a
+href="https://medium.com/@aaron.recompile/op-checktemplateverify-on-signet-locking-outputs-at-utxo-creation-time-1d623fbe3899">OP_CHECKTEMPLATEVERIFY</a>、<a
+href="https://medium.com/@aaron.recompile/sighash-anyprevout-on-signet-when-signatures-stop-binding-to-utxos-eed4fc475668">SIGHASH_ANYPREVOUT</a>——在配套的
+<a href="https://medium.com/@aaron.recompile">signet 系列</a>。规范:<a
+href="https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki">BIP-341/342</a>、<a
+href="https://github.com/bitcoin/bips/blob/master/bip-0119.mediawiki">BIP-119</a>、<a
+href="https://github.com/bitcoin/bips/blob/master/bip-0118.mediawiki">BIP-118</a>。</em></p>
+
+<p><a class="cta" href="./explorer.html">▶ Open the interactive Upgrade-Slot Explorer</a></p>
+<div class="foot">Part of <a href="./">The Grammar of Bitcoin's Extensibility</a>. Every byte from real signet transactions.</div>
+</main></body></html>
