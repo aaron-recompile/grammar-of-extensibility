@@ -84,7 +84,7 @@
 <body>
 <div class="wrap">
   <div class="topbar">← <a href="./">The Grammar of Bitcoin's Extensibility</a></div>
-  <h1>The Upgrade-Slot Explorer <span class="cn">· 升级插槽浏览器</span></h1>
+  <h1>The Upgrade-Slot Explorer</h1>
   <p class="sub">Bitcoin doesn't add a feature by inventing a new byte. It <b>reserves slots</b> in advance, then
   fills them. Pick a proposal below and watch — on <i>real signet bytes</i> — which reserved slot it
   plugs into, and why the block explorer still shows it under its <b>pre-activation name</b>.</p>
@@ -132,7 +132,7 @@
 const KEY="ff1f9fa3…9986b8"; // shared root x-only key across CSFS / IK / APO
 const ADDR=[ {h:"51",cls:"op",l:"OP_1 (v1)"},{h:"20",cls:"push",l:"PUSH32"},{h:"&lt;32B output key&gt;",cls:"data",l:"the tweaked key"} ];
 const P=[
- { id:"keypath", name:"key-path", cn:"默认长相 · 对照组", role:"the baseline",
+ { id:"keypath", name:"key-path", role:"the baseline",
    txid:"386dbb6a…d54a9c41", txlab:"(signet, Eltoo fund)",
    bytes:[ {h:"&lt;64-byte Schnorr signature&gt;",cls:"data",l:"the whole witness — no script"} ],
    meta:"This is Taproot's <b>default look</b>: a plain <code>5120…</code> address, spent by key-path. The witness reveals nothing — no leaf, no opcode. Same <code>tb1p…</code> shape as every card below, yet nothing is hidden. It's the control group: <b>the address never tells you which slot a coin uses.</b>",
@@ -141,7 +141,7 @@ const P=[
    before:"—", after:"—",
    fp:[["push length","n/a — no pubkey in a leaf"],["touches stack?","just verifies one signature"],["control block","none (key-path)"]] },
 
- { id:"cat", name:"OP_CAT", cn:"组装", role:"assemble", bip:"BIP-347",
+ { id:"cat", name:"OP_CAT", role:"assemble", bip:"BIP-347",
    txid:"00072d4a…b2d05656", txlab:"(signet, CAT hashlock reveal)",
    bytes:[ {h:"7e",cls:"op",l:"OP_CAT",hl:1},{h:"a8",cls:"op",l:"OP_SHA256"},{h:"20",cls:"push",l:"PUSH32"},{h:"936a185c…07af",cls:"data",l:"32B hash"},{h:"87",cls:"op",l:"OP_EQUAL"} ],
    meta:"witness data: <code>68656c6c6f</code>=\"hello\", <code>776f726c64</code>=\"world\". CAT joins them, hashes, compares.",
@@ -151,7 +151,7 @@ const P=[
    after:"pop two items off the stack, push their <b>concatenation</b>. It now reads and rewrites the stack.",
    fp:[["push length","32-byte data pushes"],["touches stack?","<span class='big'>YES</span> — pop 2, push 1"],["control block","c0 · leaf ver 0xc0"]] },
 
- { id:"csfs", name:"OP_CHECKSIGFROMSTACK", cn:"授权", role:"authorize", bip:"BIP-348",
+ { id:"csfs", name:"OP_CHECKSIGFROMSTACK", role:"authorize", bip:"BIP-348",
    txid:"51fceec6…d04dc63e", txlab:"(signet, CSFS rekey reveal)",
    bytes:[ {h:"20",cls:"push",l:"PUSH32"},{h:"ff1f9fa3…9986b8",cls:"data",l:"32B x-only key"},{h:"cc",cls:"op",l:"OP_CHECKSIGFROMSTACK",hl:1},{h:"69",cls:"op",l:"OP_VERIFY"},{h:"cc",cls:"op",l:"OP_CHECKSIGFROMSTACK"} ],
    meta:"CSFS verifies a signature over <i>any message you hand it on the stack</i> — unlike <code>OP_CHECKSIG</code>, which only ever verifies one over <i>this transaction</i>. It shows up <b>twice</b> here (<code>cc … 69 … cc</code>) because this leaf is a <b>rekey / delegation</b>, not a plain check: the 1st <code>cc</code> verifies the guardian key <b>"+KEY+"</b>'s off-chain signature over \"I delegate to key B\" (then <code>OP_VERIFY</code>); the 2nd <code>cc</code> verifies that B's signature authorizes this spend. A hands the coin to B, B spends it — a one-hop key rotation, enforced on-chain. (The plainest CSFS is a single <code>cc</code>; this one runs two to show off delegation.) The key is a bare <b>32-byte</b> x-only push — the same key wears a <b>33-byte</b> <code>0x01</code> hat under APO.",
@@ -161,7 +161,7 @@ const P=[
    after:"pop signature, message, pubkey; push a <b>boolean</b>. Reads and rewrites the stack.",
    fp:[["push length","<span class='big'>32</span> — bare x-only key"],["touches stack?","<span class='big'>YES</span> — pop 3, push 1"],["control block","c1 · leaf ver still 0xc0 (just y-parity)"]] },
 
- { id:"ik", name:"OP_INTERNALKEY", cn:"引用", role:"reference", bip:"BIP-349",
+ { id:"ik", name:"OP_INTERNALKEY", role:"reference", bip:"BIP-349",
    txid:"545450ac…fae58ffa", txlab:"(signet, IK reveal)",
    bytes:[ {h:"cb",cls:"op",l:"OP_INTERNALKEY",hl:1},{h:"20",cls:"push",l:"PUSH32"},{h:"ff1f9fa3…9986b8",cls:"data",l:"expected key"},{h:"87",cls:"op",l:"OP_EQUAL"} ],
    meta:"Pushes the Taproot <b>internal key</b> onto the stack, then <code>OP_EQUAL</code> checks it against the expected one — the same root key "+KEY+", a bare <b>32-byte</b> push.",
@@ -171,7 +171,7 @@ const P=[
    after:"<b>push the internal key</b> from the control block onto the stack.",
    fp:[["push length","32 — x-only key"],["touches stack?","<span class='big'>YES</span> — pushes a key"],["control block","c1 · leaf ver 0xc0"]] },
 
- { id:"ctv", name:"OP_CHECKTEMPLATEVERIFY", cn:"强制", role:"enforce", bip:"BIP-119",
+ { id:"ctv", name:"OP_CHECKTEMPLATEVERIFY", role:"enforce", bip:"BIP-119",
    txid:"9ccbce8a…f220d55c", txlab:"(signet, CTV reveal)",
    bytes:[ {h:"20",cls:"push",l:"PUSH32"},{h:"32eb42…f03b42",cls:"data",l:"32B template hash"},{h:"b3",cls:"op",l:"OP_NOP4",hl:1} ],
    meta:"Pushes a 32-byte <b>template hash</b>, then <code>OP_NOP4</code> checks the spending transaction matches it. It <b>peeks, never pops</b> — a read-only check.",
@@ -181,7 +181,7 @@ const P=[
    after:"<b>check</b> the transaction matches the committed template; fail if it doesn't. Never touches the stack data.",
    fp:[["push length","32 — a hash, not a pubkey"],["touches stack?","<span class='big'>NO</span> — peek only (why it fits a NOP)"],["control block","c0 · leaf ver 0xc0"]] },
 
- { id:"apo", name:"SIGHASH_ANYPREVOUT", cn:"签名层 · 不是 opcode", role:"not an opcode", bip:"BIP-118",
+ { id:"apo", name:"SIGHASH_ANYPREVOUT", role:"not an opcode", bip:"BIP-118",
    txid:"096e31cc…fe195601", txlab:"(signet, APO Eltoo state)",
    bytes:[ {h:"21",cls:"push",l:"PUSH33",hl:1},{h:"01",cls:"magic",l:"0x01 magic",hl:1},{h:"ff1f9fa3…9986b8",cls:"data",l:"same key"},{h:"ac",cls:"op",l:"OP_CHECKSIG"} ],
    meta:"Same root key "+KEY+" as CSFS — but here it's <b>33 bytes</b> (<code>21</code>), wearing a <code>0x01</code> hat, feeding a <b>plain OP_CHECKSIG</b>. APO adds <b>no new opcode at all</b>.",
@@ -215,17 +215,17 @@ const LAYERS=[
 const picker=document.getElementById('picker');
 const byId={}; P.forEach((p,i)=>byId[p.id]=i);
 const GROUPS=[
- {label:"baseline · 对照组(没走升级槽)", ids:["keypath"]},
- {label:"OP_SUCCESS slot · 动栈,tapscript-only", ids:["cat","csfs","ik"]},
- {label:"NOP slot · 只读检查", ids:["ctv"]},
- {label:"not an opcode · 签名层(公钥前缀 + sighash flag)", ids:["apo"]},
+ {label:"baseline · control group (no upgrade slot used)", ids:["keypath"]},
+ {label:"OP_SUCCESS slot · touches the stack, tapscript-only", ids:["cat","csfs","ik"]},
+ {label:"NOP slot · read-only check", ids:["ctv"]},
+ {label:"not an opcode · signature layer (pubkey prefix + sighash flag)", ids:["apo"]},
 ];
 GROUPS.forEach(g=>{
   const wrap=document.createElement('div');wrap.className='pgroup';
   const lbl=document.createElement('div');lbl.className='pglabel';lbl.textContent=g.label;wrap.appendChild(lbl);
   const row=document.createElement('div');row.className='prow';
   g.ids.forEach(id=>{const i=byId[id],p=P[i];const b=document.createElement('button');b.dataset.i=i;
-    b.innerHTML=`<b style="font-size:15px">${p.abbr}</b><span class="r">${p.name!==p.abbr?p.name+' · ':''}${p.cn} · ${p.role}</span>`;
+    b.innerHTML=`<b style="font-size:15px">${p.abbr}</b><span class="r">${p.name!==p.abbr?p.name+' · ':''}${p.role}</span>`;
     b.onclick=()=>select(i);row.appendChild(b);});
   wrap.appendChild(row);picker.appendChild(wrap);
 });

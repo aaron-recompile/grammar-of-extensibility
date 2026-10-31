@@ -92,7 +92,7 @@ So here is the real shape of the thing, the one the six flags only hint at:
 
 > A signature commits to a **subset of the transaction's sub-fields** — this input's identity, that input's amount, this output's script, that output's value, the locktime, and so on. The sighash flags are a handful of **coarse presets** over that grid. APO adds a few finer ones on the input side. But the grid itself is large, and the flags visit only a few of its corners.
 
-Recall the **SEE (看) / BLIND (蒙)** dials from the sighash booklet, [*What a Signature Can See*](https://sighash.bitcoincoding.dev/): a flag flips fields only in big blocks. The grid underneath is finer —
+Recall the **SEE / BLIND** dials from the sighash booklet, [*What a Signature Can See*](https://sighash.bitcoincoding.dev/): a flag flips fields only in big blocks. The grid underneath is finer —
 
 ```
    the coarse dial (a sighash flag)         the fine grid underneath
@@ -100,11 +100,11 @@ Recall the **SEE (看) / BLIND (蒙)** dials from the sighash booklet, [*What a 
    INPUT :  all / mine(ACP) / none(APO)     each output = [ address  | amount ]
 
                     identity   script   amount
-          in 0        ● 看      ● 看     ● 看
-          in 1        ○ 蒙      ● 看     ● 看     ← APO blinds just in-1's identity
-          out 0        —        ● 看     ○ 蒙     ← SEE the address, BLIND the amount
-          out 1        —        ○ 蒙     ● 看     ← BLIND the address, SEE the amount
-                       ● = SEE (看)      ○ = BLIND (蒙)
+          in 0        ●         ●        ●
+          in 1        ○         ●        ●        ← APO blinds just in-1's identity
+          out 0        —        ●        ○        ← SEE the address, BLIND the amount
+          out 1        —        ○        ●        ← BLIND the address, SEE the amount
+                       ● = SEE           ○ = BLIND
 
    A flag can only flip whole rows — a few corners of this grid.
    CAT + CSFS flip ANY cell: glue exactly the fields you want, then verify.

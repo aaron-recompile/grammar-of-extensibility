@@ -25,7 +25,7 @@ em{color:#c9d1d9} ul,ol{padding-left:24px}
 .cta{display:inline-block;background:var(--op);color:#0d1117;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:8px;margin:10px 0}
 .foot{color:var(--dim);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
 </style></head><body>
-<div class="topbar">← <a href="./">The Grammar of Bitcoin's Extensibility · 比特币的扩展性语法学</a></div>
+<div class="topbar">← <a href="./">The Grammar of Bitcoin's Extensibility</a></div>
 <main>
 <h1 id="the-grammar-of-bitcoins-extensibility">The Grammar of Bitcoin's
 Extensibility</h1>
@@ -232,8 +232,8 @@ sighash flags are a handful of <strong>coarse presets</strong> over that
 grid. APO adds a few finer ones on the input side. But the grid itself
 is large, and the flags visit only a few of its corners.</p>
 </blockquote>
-<p>Recall the <strong>SEE (看) / BLIND (蒙)</strong> dials from the
-sighash booklet, <a href="https://sighash.bitcoincoding.dev/"><em>What a
+<p>Recall the <strong>SEE / BLIND</strong> dials from the sighash
+booklet, <a href="https://sighash.bitcoincoding.dev/"><em>What a
 Signature Can See</em></a>: a flag flips fields only in big blocks. The
 grid underneath is finer —</p>
 <pre><code>   the coarse dial (a sighash flag)         the fine grid underneath
@@ -241,11 +241,11 @@ grid underneath is finer —</p>
    INPUT :  all / mine(ACP) / none(APO)     each output = [ address  | amount ]
 
                     identity   script   amount
-          in 0        ● 看      ● 看     ● 看
-          in 1        ○ 蒙      ● 看     ● 看     ← APO blinds just in-1&#39;s identity
-          out 0        —        ● 看     ○ 蒙     ← SEE the address, BLIND the amount
-          out 1        —        ○ 蒙     ● 看     ← BLIND the address, SEE the amount
-                       ● = SEE (看)      ○ = BLIND (蒙)
+          in 0        ●         ●        ●
+          in 1        ○         ●        ●        ← APO blinds just in-1&#39;s identity
+          out 0        —        ●        ○        ← SEE the address, BLIND the amount
+          out 1        —        ○        ●        ← BLIND the address, SEE the amount
+                       ● = SEE           ○ = BLIND
 
    A flag can only flip whole rows — a few corners of this grid.
    CAT + CSFS flip ANY cell: glue exactly the fields you want, then verify.</code></pre>

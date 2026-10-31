@@ -1,4 +1,4 @@
-# The Grammar of Bitcoin's Extensibility · 比特币的扩展性语法学
+# The Grammar of Bitcoin's Extensibility
 
 ### 🔗 Live: **[slots.bitcoincoding.dev](https://slots.bitcoincoding.dev)** — the interactive upgrade-slot explorer + the essay
 
@@ -9,7 +9,7 @@ Bitcoin doesn't add a feature by inventing a new byte. It **reserves slots** in 
 | | |
 |---|---|
 | **`explorer.html`** | The interactive **Upgrade-Slot Explorer** — pick an opcode, see its real leaf bytes, watch which reserved slot it plugs into, and why the explorer still shows its pre-activation "fossil" name. |
-| **`article-en.md` / `article-cn.md`** | The essay (English / 中文): peel the onion from the address inward — witness version → leaf version → the opcode slot (NOP vs OP_SUCCESS) → the `0x01` hat → the empty annex → count the unopened slots. |
+| **`article-en.md`** | The essay: peel the onion from the address inward — witness version → leaf version → the opcode slot (NOP vs OP_SUCCESS) → the `0x01` hat → the empty annex → count the unopened slots. |
 
 ## Quick start
 

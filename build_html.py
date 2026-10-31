@@ -3,10 +3,20 @@
 Run:  python3 build_html.py   (re-run whenever the .md changes)"""
 import subprocess, os, html
 HERE = os.path.dirname(os.path.abspath(__file__))
+EN_TITLE = "The Grammar of Bitcoin's Extensibility"
+# (source .md, output .html, page title, topbar label)
+# A title of None means "use the first '# ' heading of the source file" (keeps
+# the Chinese edition's title out of this script). The English page's topbar is
+# English-only; the Chinese edition keeps its bilingual "EN · CN" topbar.
 DOCS = [
-    ("article-en.md", "article-en.html", "The Grammar of Bitcoin's Extensibility"),
-    ("article-cn.md", "article-cn.html", "比特币的扩展性语法学"),
+    ("article-en.md", "article-en.html", EN_TITLE, EN_TITLE),
+    ("article-cn.md", "article-cn.html", None, "bilingual"),
 ]
+def first_h1(src):
+    with open(os.path.join(HERE,src),encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("# "): return line[2:].strip()
+    return EN_TITLE
 CSS = """
 :root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--dim:#8b949e;--accent:#58a6ff;--op:#f0883e;--ok:#2ea043}
 *{box-sizing:border-box}
@@ -32,13 +42,15 @@ em{color:#c9d1d9} ul,ol{padding-left:24px}
 .cta{display:inline-block;background:var(--op);color:#0d1117;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:8px;margin:10px 0}
 .foot{color:var(--dim);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
 """
-def render(src, out, title):
+def render(src, out, title, topbar):
+    if title is None: title = first_h1(src)
+    if topbar == "bilingual": topbar = f"{EN_TITLE} · {title}"
     body = subprocess.run(["pandoc","-f","gfm","-t","html5","--no-highlight",os.path.join(HERE,src)],
                           capture_output=True, text=True, check=True).stdout
     page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/><title>{html.escape(title)}</title>
 <style>{CSS}</style></head><body>
-<div class="topbar">← <a href="./">The Grammar of Bitcoin's Extensibility · 比特币的扩展性语法学</a></div>
+<div class="topbar">← <a href="./">{html.escape(topbar, quote=False)}</a></div>
 <main>
 {body}
 <p><a class="cta" href="./explorer.html">▶ Open the interactive Upgrade-Slot Explorer</a></p>
