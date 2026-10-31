@@ -49,7 +49,7 @@ def render(src, out, title, topbar):
                           capture_output=True, text=True, check=True).stdout
     page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/><title>{html.escape(title)}</title>
-<style>{CSS}</style></head><body>
+<style>{CSS}</style><script>window.goatcounter={{path:function(p){{return location.host+p}}}}</script><script data-goatcounter="https://bitcoincoding.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></head><body>
 <div class="topbar">← <a href="./">{html.escape(topbar, quote=False)}</a></div>
 <main>
 {body}
